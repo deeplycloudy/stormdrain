@@ -194,7 +194,9 @@ if __name__ == '__main__':
             
         def send(self, msg):
             """ SD_bounds_updated messages are sent here """
+            # print 'Data object got message {0}'.format(msg)
             if self.target is not None:
+                # print 'Sending from Data.'
                 self.target.send(self.data)
                 
                 
@@ -232,10 +234,10 @@ if __name__ == '__main__':
     fig_updater = FigureUpdater(panel_fig)
     bounds_updated_xchg = get_exchange('SD_bounds_updated')
     bounds_updated_xchg.attach(fig_updater)
-    panels.panels['xy'].axis((-90, -110, 30, 40))
+    panels.panels['xy'].axis((-110, -90, 30, 40))
     panels.panels['tz'].axis((0, 10, 0, 5e3))
     panels.panels['zy'].axis((0, 5e3, 30, 40,))
-    panels.panels['xz'].axis((-90, -110, 0, 5e3))
+    panels.panels['xz'].axis((-110, -90, 0, 5e3))
 
     
     plt.show()

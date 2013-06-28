@@ -43,10 +43,12 @@ class BoundsFilter(Segment):
             a = (yield)
             lim = bounds.limits()
             good = np.ones(a.shape, dtype=bool)
+            print "Filter with limits {0}".format(lim)
             
             for k, (v_min, v_max) in lim:
                 good &= (a[k] >= v_min) & (a[k] <= v_max)
 
+            print a[good]
             target.send(a[good])
 
 
