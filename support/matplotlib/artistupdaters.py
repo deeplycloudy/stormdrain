@@ -1,6 +1,8 @@
 import numpy as np
 
 from stormdrain.pipeline import coroutine
+from stormdrain.pubsub import get_exchange
+from stormdrain.pipeline import Branchpoint
 
 class FigureUpdater(object):
     def __init__(self, figure):
@@ -9,6 +11,26 @@ class FigureUpdater(object):
     def send(self, bounds):
         self.figure.canvas.draw()
 
+def scatter_dataset_on_panels(d, panels, color_field=None):
+    bounds_updated_xchg = get_exchange('SD_bounds_updated')
+    all_outlets = []
+    empty = [0,]
+    for ax in panels.ax_specs:
+        # create a new scatter artist
+        art = ax.scatter(empty, empty, c=empty)
+        
+        # Need to update the color mapping using the specified color field. It needs to know that the
+        # bounds have been updated in order to adjust the color limits.
+        up = MappableRangeUpdater(art, color_field=color_field)
+        bounds_updated_xchg.attach(up)
+                
+        # Need to update the actual scatter coordinate data on each scatter artist
+        outlet = ScatterArtistOutlet(art, coord_names=panels.ax_specs[ax], color_field=color_field)
+
+        all_outlets.append(outlet.update())
+
+    brancher = Branchpoint(all_outlets)
+    return brancher
 
 class ScatterArtistOutlet(object):
     """ 

@@ -2,6 +2,11 @@ import numpy as np
 
 from stormdrain.pipeline import Segment, coroutine
 
+SD_exchanges = {
+    'SD_bounds_updated':"Bounds instance has been updated",
+    }
+
+
 class BoundsFilter(Segment):
     """ Filter showing use of the axes bounds to filter data from an array.
 

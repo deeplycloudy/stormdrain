@@ -4,6 +4,8 @@ from stormdrain.bounds import Bounds
 from stormdrain.pubsub import get_exchange
 from mplevents import MPLaxesManager
 
+
+
 class LinkedPanels(object):
     """ Helper class to manage updates of linked axes.
     

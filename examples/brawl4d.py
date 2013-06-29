@@ -1,13 +1,12 @@
 import numpy as np
 
 from stormdrain.pubsub import get_exchange
-from stormdrain.bounds import BoundsFilter, Bounds
-
-from stormdrain.pipeline import Branchpoint
+from stormdrain.bounds import BoundsFilter
+from stormdrain.data import NamedArrayDataset
 
 from stormdrain.support.matplotlib.linked import LinkedPanels
 from stormdrain.support.matplotlib.mplevents import MPLaxesManager
-from stormdrain.support.matplotlib.artistupdaters import MappableRangeUpdater, ScatterArtistOutlet, FigureUpdater
+from stormdrain.support.matplotlib.artistupdaters import scatter_dataset_on_panels, FigureUpdater
 
 
 # Names of recognized exchanges and a simple description of what they do.
@@ -77,79 +76,39 @@ if __name__ == '__main__':
     
     panel_fig = plt.figure()
     panels = Panels4D(figure=panel_fig)
-    
-    
-    class Dataset(object):
-        def __init__(self, target=None):
-            self.target = target
-            self.data = np.asarray( [
-                ('The Most Toxic \nTown in America', 36.983, -94.833,  250. , 1.34 ),
-                ('Dublin, TX',                       32.087, -98.343,  446. , 5.25 ),
-                ('Floating Mesa',                    35.277, -102.049, 1064., 1.90 ),
-                ('Lubbock',                          33.582, -101.881, 984. , 5.37 ),
-                ('Stonehenge Replica',               31.892, -102.326, 886. , 7.01 ),
-                ('Very Large Array',                 34.079, -107.618, 2126., 4.23 ),
-                ], 
-                dtype = [
-                    ('name', '|S32'), 
-                    ('lat', '>f4'), 
-                    ('lon', '>f4'), 
-                    ('alt', '>f4'), 
-                    ('time', '>f4') 
-                    ] )
-            self.bounds_updated_xchg = get_exchange('SD_bounds_updated')
-            
-            # Need to find a way to detach when "done" with dataset. __del__ doesn't work
-            # because of some gc issues. context manager doesn't exactly work, since the
-            # dataset objects are not one-shot tasks; they live for the whole lifecycle.
-            # Anyway, ignoring for now.
-            self.bounds_updated_xchg.attach(self)
-            
-            
-        def send(self, msg):
-            """ SD_bounds_updated messages are sent here """
-            # print 'Data object got message {0}'.format(msg)
-            if self.target is not None:
-                # print 'Sending from Data.'
-                self.target.send(self.data)
-                
-                
-    def new_scatter_for_dataset(d, panels=None):
-        empty = [0,]
-        xy_art = panels.panels['xy'].scatter(empty, empty, c=empty)
-        tz_art = panels.panels['tz'].scatter(empty, empty, c=empty)
-        zy_art = panels.panels['zy'].scatter(empty, empty, c=empty)
-        xz_art = panels.panels['xz'].scatter(empty, empty, c=empty)
-        
-        xy_up = MappableRangeUpdater(xy_art, color_field='time')
-        tz_up = MappableRangeUpdater(tz_art, color_field='time')
-        zy_up = MappableRangeUpdater(zy_art, color_field='time')
-        xz_up = MappableRangeUpdater(xz_art, color_field='time')
-        bounds_updated_xchg = get_exchange('SD_bounds_updated')
-        bounds_updated_xchg.attach(xy_up)
-        bounds_updated_xchg.attach(tz_up)
-        bounds_updated_xchg.attach(zy_up)
-        bounds_updated_xchg.attach(xz_up)
-        
-        scatter_xy_out = ScatterArtistOutlet(xy_art, coord_names=('lon', 'lat'), color_field='time')
-        scatter_tz_out = ScatterArtistOutlet(tz_art, coord_names=('time', 'alt'), color_field='time')
-        scatter_zy_out = ScatterArtistOutlet(zy_art, coord_names=('alt', 'lat'), color_field='time')
-        scatter_xz_out = ScatterArtistOutlet(xz_art, coord_names=('lon', 'alt'), color_field='time')
-        brancher = Branchpoint([scatter_xy_out.update(), scatter_tz_out.update(), scatter_zy_out.update(), scatter_xz_out.update()])
-        
-        scatter_updater = brancher.broadcast()
-        bound_filter = BoundsFilter(target=scatter_updater, bounds=panels.bounds)
-        filterer = bound_filter.filter()
-        d.target = filterer
-                
-    d = Dataset()
-    new_scatter_for_dataset(d, panels=panels)
-    
     fig_updater = FigureUpdater(panel_fig)
+    
+    data = np.asarray( [ ('The Most Toxic \nTown in America', 36.983, -94.833,  250. , 1.34 ),
+                        ('Dublin, TX',                       32.087, -98.343,  446. , 5.25 ),
+                        ('Floating Mesa',                    35.277, -102.049, 1064., 1.90 ),
+                        ('Lubbock',                          33.582, -101.881, 984. , 5.37 ),
+                        ('Stonehenge Replica',               31.892, -102.326, 886. , 7.01 ),
+                        ('Very Large Array',                 34.079, -107.618, 2126., 4.23 ),
+                       ],  
+                       dtype = [ ('name', '|S32'), ('lat', '>f4'), ('lon', '>f4'), 
+                                 ('alt', '>f4'), ('time', '>f4') ]  )
+    # Create a dataset that stores numpy named array data, and automatically receives updates 
+    # when the bounds of a plot changes.
+    d = NamedArrayDataset(data)
+    
+    # Create a scatterplot representation of the dataset, and add the necessary transforms
+    # to get the data to the plot. In this case, it's a simple filter on the plot bounds, and 
+    # distribution to all the scatter artists. Might also add map projection here if the plot
+    # were not directly showing lat, lon, alt.
+    scatter_outlet_broadcaster = scatter_dataset_on_panels(d, panels=panels, color_field='time')
+    scatter_updater = scatter_outlet_broadcaster.broadcast()
+    bound_filter = BoundsFilter(target=scatter_updater, bounds=panels.bounds)
+    filterer = bound_filter.filter()
+    d.target = filterer
+    
+    # Tell the figure to update (draw) when the bounds change.
     bounds_updated_xchg = get_exchange('SD_bounds_updated')
     bounds_updated_xchg.attach(fig_updater)
+    
+    # Set an initial view.
     panels.panels['xy'].axis((-110, -90, 30, 40))
     panels.panels['tz'].axis((0, 10, 0, 5e3))
+    # Shouldn't need these, since the previous two cover all coordinates
     # panels.panels['zy'].axis((0, 5e3, 30, 40,))
     # panels.panels['xz'].axis((-110, -90, 0, 5e3))
 

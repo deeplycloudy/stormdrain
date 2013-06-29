@@ -1,7 +1,7 @@
 from stormdrain.pubsub import get_exchange
 
 # Names of recognized exchanges and a simple description of what they do.
-mpl_exchanges = {
+MPL_exchanges = {
     'MPL_interaction_complete':"Plot limits have changed by user interaction and/or programmatic limit set. Message sent is MPLaxesManager instance",
     }
 
