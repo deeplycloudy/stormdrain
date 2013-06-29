@@ -8,12 +8,6 @@ from stormdrain.support.matplotlib.mplevents import MPLaxesManager
 from stormdrain.support.matplotlib.artistupdaters import scatter_dataset_on_panels, FigureUpdater
 
 
-# Names of recognized exchanges and a simple description of what they do.
-# brawl4d_exchanges = {
-#     'B4D_panel_bounds_updated':"messaged when the bounds in a 4D panel plot changes",
-#     'B4D_panel_redraw':"messaged when a panel redraw is necessary",
-#     }
-
 class Panels4D(LinkedPanels):
     # 1.618
     # 89,55,34,21,13,8,5,3,2,1,1,0
@@ -53,21 +47,6 @@ class Panels4D(LinkedPanels):
             
         super(Panels4D, self).__init__(*args, **kwargs)
             
-        # for mgr in self.axes_managers.values():
-        #     mgr.interaction_callback = self.update_bounds_after_interaction
-
-
-    # def coord_names_4d(self):
-    #     """ Return the names of the x, y, z and time coordinates"""
-    #     panels = self.panels
-    #     xy_spec = self.ax_specs[ panels['xy'] ]
-    #     tz_spec = self.ax_specs[ panels['tz'] ]
-    #     x_coord, ycoord, z_coord, t_coord = xy_spec['x'], xy_spec['y'], tz_spec['y'], tz_spec['x']
-    #     return x_coord, ycoord, z_coord, t_coord
-    # def panel_name_for_axis(self, ax):
-    #     for panel_name, axis in self.panels.iteritems():
-    #         if axis is ax:
-    #             return panel_name
                 
                 
 if __name__ == '__main__':
@@ -99,7 +78,6 @@ if __name__ == '__main__':
     bound_filter = BoundsFilter(target=scatter_updater, bounds=panels.bounds)
     filterer = bound_filter.filter()
     d.target = filterer
-    
     
     # Set an initial view.
     panels.panels['xy'].axis((-110, -90, 30, 40))
