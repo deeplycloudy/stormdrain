@@ -96,7 +96,7 @@ if __name__ == '__main__':
                         
     panel2_fig = plt.figure()
     panels2 = Panels4D(figure=panel2_fig, names_4D=('x', 'y', 'z', 'time'))
-    fig_updater2 = FigureUpdater(panel_fig)
+    fig_updater2 = FigureUpdater(panel2_fig)
     
     scatter_outlet_broadcaster2 = scatter_dataset_on_panels(panels=panels2, color_field='time')
     scatter_updater2 = scatter_outlet_broadcaster2.broadcast()
@@ -108,6 +108,5 @@ if __name__ == '__main__':
     branch.targets.add(cs_transformer)
     panels2.panels['xy'].axis((-1000, 1000, -1000, 1000))
     panels2.panels['tz'].axis((0, 10, 0, 5))
-    
     
     plt.show()
