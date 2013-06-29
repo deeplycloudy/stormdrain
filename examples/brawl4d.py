@@ -5,6 +5,7 @@ from stormdrain.bounds import BoundsFilter, Bounds
 
 from stormdrain.pipeline import Branchpoint
 
+from stormdrain.support.matplotlib.linked import LinkedPanels
 from stormdrain.support.matplotlib.mplevents import MPLaxesManager
 from stormdrain.support.matplotlib.artistupdaters import MappableRangeUpdater, ScatterArtistOutlet, FigureUpdater
 
@@ -15,20 +16,7 @@ from stormdrain.support.matplotlib.artistupdaters import MappableRangeUpdater, S
 #     'B4D_panel_redraw':"messaged when a panel redraw is necessary",
 #     }
 
-
-
-
-class Panels(object):
-    """ Class to create and maintain a 4-D plot with four orthogonal projections of the data.
-        x-y, x-z, z-y, t-z, t
-
-        Instance variables:
-            pool_manager is an associated manager of a pool of data
-            view_bounds is this view's specific view bounds
-
-        Issues:
-            Should be able to choose any variable vs. time instead of hard-coding z.
-    """
+class Panels4D(LinkedPanels):
     # 1.618
     # 89,55,34,21,13,8,5,3,2,1,1,0
 
@@ -49,120 +37,46 @@ class Panels(object):
         'tz':(mg*aspect, mg+dy+dz+mg, dt*aspect, dz),
         }
 
-    # margin_defaults = {
-    #         'xy':(0.1, 0.1, 0.7, 0.4),
-    #         'xz':(0.1, 0.5, 0.7, 0.15),
-    #         'zy':(0.8, 0.1, 0.15, 0.4),
-    #         'tz':(0.1, 0.8, 0.85, 0.15),
-    #         # 't': (0.1, 0.85, 0.8, 0.1),
-    #         }        
-    #     
-    def __init__(self, figure):
-        self.figure = figure
-        self.panels = {}
-        self.axes_managers = {}
-        self.bounds = Bounds()
-
-        # self.datasets = [] # probably actually should be a set, not list. Just add to this.
-        self.ax_specs = {} # {ax0:ax0_spec, ax1:ax1_spec}, specs are {'x':'array_varname', 'y':'array_varname}
-        
-        self._panel_setup()
-        
-        self.interaction_xchg = get_exchange('MPL_interaction_complete')
-        self.interaction_xchg.attach(self)
-        self.bounds_updated_xchg = get_exchange('SD_bounds_updated')
-
-    def reset_axes_events(self):
-        for mgr in self.axes_managers.values():
-            mgr.events.reset()
-
-
-    def bounds_updated(self):
-        self.bounds_updated_xchg.send(self.bounds)
-
-    def send(self, ax_mgr):
-        """ MPL_interaction_complete messages are sent here """
-        bounds = self.bounds
-        x_var, y_var = ax_mgr.coordinate_names['x'], ax_mgr.coordinate_names['y']
-        axes = ax_mgr.axes
-
-        # Figure out if the axis limits have changed, and set any new bounds
-        new_limits = axes.axis(emit=False)    # emit = False prevents infinite recursion    
-        old_x, old_y = getattr(bounds, x_var), getattr(bounds, y_var)
-        new_x, new_y = new_limits[0:2], new_limits[2:4]
-        
-        
-        
-        # Handle special case of the z axis that's part of the zy axes,
-        # which isn't shared with any other axis
-        if ax_mgr is self.axes_managers['zy']:
-            # Update one of the shared Z axes since zy changed
-            self.axes_managers['tz'].axes.set_ylim(new_x)
-            self.reset_axes_events()
-            # axes.figure.canvas.draw()
-        if (ax_mgr is self.axes_managers['tz']) | (ax_mgr is self.axes_managers['xz']):
-            # One of the shared axes changed, so update zy
-            self.axes_managers['zy'].axes.set_xlim(new_y)
-            self.reset_axes_events()
-            # axes.figure.canvas.draw()        
-
-        if (new_x != old_x) | (new_y != old_y):
-            setattr(bounds, x_var, new_x)
-            setattr(bounds, y_var, new_y)
-            self.bounds_updated()
-
-
-    def _panel_setup(self):
-        fig = self.figure
-
-        # there's a lot of redundancy here. Could it be reduced to ax_specs,
-        # which the data pipeline uses, and nothing else?
-
-        # --------- Set up data display axes ---------
-        panels = self.panels
-        panels['xy'] = fig.add_axes(Panels.margin_defaults['xy'])
-        panels['xz'] = fig.add_axes(Panels.margin_defaults['xz'], sharex=panels['xy'])
-        panels['zy'] = fig.add_axes(Panels.margin_defaults['zy'], sharey=panels['xy'])
-        panels['tz'] = fig.add_axes(Panels.margin_defaults['tz'], sharey=panels['xz'])
-
-        panels['xz'].xaxis.set_visible(False)
-        panels['zy'].yaxis.set_visible(False)
-
-        self.ax_specs = { panels['xy']: {'x':'lon', 'y':'lat'}, 
-                          panels['xz']: {'x':'lon', 'y':'alt'},
-                          panels['zy']: {'x':'alt', 'y':'lat'},
-                          panels['tz']: {'x':'time', 'y':'alt'}, }
-
-        self.axes_managers['xy'] = MPLaxesManager(panels['xy'], self.ax_specs[panels['xy']])
-        self.axes_managers['xz'] = MPLaxesManager(panels['xz'], self.ax_specs[panels['xz']])
-        self.axes_managers['zy'] = MPLaxesManager(panels['zy'], self.ax_specs[panels['zy']])
-        self.axes_managers['tz'] = MPLaxesManager(panels['tz'], self.ax_specs[panels['tz']])
-
-
-
+    def __init__(self, *args, **kwargs):
+        self.figure = kwargs.pop('figure', None)
+        if self.figure is not None:
+            fig = self.figure
+            self.panels = {}
+            self.panels['xy'] = fig.add_axes(Panels4D.margin_defaults['xy'])
+            self.panels['xz'] = fig.add_axes(Panels4D.margin_defaults['xz'], sharex=self.panels['xy'])
+            self.panels['zy'] = fig.add_axes(Panels4D.margin_defaults['zy'], sharey=self.panels['xy'])
+            self.panels['tz'] = fig.add_axes(Panels4D.margin_defaults['tz'], sharey=self.panels['xz'])
+            
+            ax_specs = { self.panels['xy']: ('lon', 'lat'), 
+                         self.panels['xz']: ('lon', 'alt'),
+                         self.panels['zy']: ('alt', 'lat'),
+                         self.panels['tz']: ('time', 'alt'), }
+            kwargs['ax_specs'] = ax_specs
+            
+        super(Panels4D, self).__init__(*args, **kwargs)
+            
         # for mgr in self.axes_managers.values():
         #     mgr.interaction_callback = self.update_bounds_after_interaction
 
 
-    def coord_names_4d(self):
-        """ Return the names of the x, y, z and time coordinates"""
-        panels = self.panels
-        xy_spec = self.ax_specs[ panels['xy'] ]
-        tz_spec = self.ax_specs[ panels['tz'] ]
-        x_coord, ycoord, z_coord, t_coord = xy_spec['x'], xy_spec['y'], tz_spec['y'], tz_spec['x']
-        return x_coord, ycoord, z_coord, t_coord
-
-    def panel_name_for_axis(self, ax):
-        for panel_name, axis in self.panels.iteritems():
-            if axis is ax:
-                return panel_name
+    # def coord_names_4d(self):
+    #     """ Return the names of the x, y, z and time coordinates"""
+    #     panels = self.panels
+    #     xy_spec = self.ax_specs[ panels['xy'] ]
+    #     tz_spec = self.ax_specs[ panels['tz'] ]
+    #     x_coord, ycoord, z_coord, t_coord = xy_spec['x'], xy_spec['y'], tz_spec['y'], tz_spec['x']
+    #     return x_coord, ycoord, z_coord, t_coord
+    # def panel_name_for_axis(self, ax):
+    #     for panel_name, axis in self.panels.iteritems():
+    #         if axis is ax:
+    #             return panel_name
                 
                 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     
     panel_fig = plt.figure()
-    panels = Panels(panel_fig)
+    panels = Panels4D(figure=panel_fig)
     
     
     class Dataset(object):
@@ -236,8 +150,8 @@ if __name__ == '__main__':
     bounds_updated_xchg.attach(fig_updater)
     panels.panels['xy'].axis((-110, -90, 30, 40))
     panels.panels['tz'].axis((0, 10, 0, 5e3))
-    panels.panels['zy'].axis((0, 5e3, 30, 40,))
-    panels.panels['xz'].axis((-110, -90, 0, 5e3))
+    # panels.panels['zy'].axis((0, 5e3, 30, 40,))
+    # panels.panels['xz'].axis((-110, -90, 0, 5e3))
 
     
     plt.show()

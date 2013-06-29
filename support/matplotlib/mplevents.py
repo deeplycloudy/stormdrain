@@ -102,9 +102,9 @@ class Accumulator(object):
 
 class MPLaxesManager(object):
 
-    def __init__(self, axes, coordinate_names):
+    def __init__(self, axes): #coordinate_names
         self.axes   = axes
-        self.coordinate_names = coordinate_names
+        # self.coordinate_names = coordinate_names
         self.events = Accumulator(self.on_axes_changed)        
         
         self.callback_ids = {}
