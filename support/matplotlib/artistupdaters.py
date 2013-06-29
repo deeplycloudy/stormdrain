@@ -14,7 +14,7 @@ class FigureUpdater(object):
     def send(self, bounds):
         self.figure.canvas.draw()
 
-def scatter_dataset_on_panels(d, panels, color_field=None):
+def scatter_dataset_on_panels(panels, color_field=None):
     bounds_updated_xchg = get_exchange('SD_bounds_updated')
     all_outlets = []
     empty = [0,]
