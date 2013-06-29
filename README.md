@@ -10,6 +10,6 @@ Your data sit at the inlet of a pipeline, while the outlet of the pipeline could
 
 Matplotlib linked axes support
 ==============================
-There are some helper classes in support.matplotlib to help manage linked axes that can't otherwise be shared by 
+There are some helper classes in support.matplotlib to help manage linked axes that can't otherwise be shared by the sharex=ax support.
 
 These are hooked into the stormdrain.bounds event support.
