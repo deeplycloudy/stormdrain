@@ -1,3 +1,8 @@
+""" Why brawl4d? It's inhereted from an old IDL-based 3D viewer that was designed to plot
+    Balloons, Radar, and Aircraft with Lightning = BRAWL.
+
+"""
+
 import numpy as np
 
 from stormdrain.bounds import BoundsFilter
@@ -92,7 +97,8 @@ if __name__ == '__main__':
 
 
 
-    # Now let's set up a second figure that has projected data
+    # Now let's set up a second figure that has projected data. The unprojected axes act
+    # as the master data controller, and control what data get re-flowed to the other plot.
                         
     panel2_fig = plt.figure()
     panels2 = Panels4D(figure=panel2_fig, names_4D=('x', 'y', 'z', 'time'))
@@ -105,6 +111,7 @@ if __name__ == '__main__':
     cs_transformer = cs.project_points(target=scatter_updater2, x_coord='x', y_coord='y', z_coord='z', 
                         lat_coord='lat', lon_coord='lon', alt_coord='alt', distance_scale_factor=1.0e-3)
 
+    # tap into the data that result from subsetting on the first axes.
     branch.targets.add(cs_transformer)
     panels2.panels['xy'].axis((-1000, 1000, -1000, 1000))
     panels2.panels['tz'].axis((0, 10, 0, 5))
