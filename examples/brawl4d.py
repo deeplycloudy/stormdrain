@@ -1,6 +1,5 @@
 import numpy as np
 
-from stormdrain.pubsub import get_exchange
 from stormdrain.bounds import BoundsFilter
 from stormdrain.data import NamedArrayDataset
 
@@ -101,9 +100,6 @@ if __name__ == '__main__':
     filterer = bound_filter.filter()
     d.target = filterer
     
-    # Tell the figure to update (draw) when the bounds change.
-    bounds_updated_xchg = get_exchange('SD_bounds_updated')
-    bounds_updated_xchg.attach(fig_updater)
     
     # Set an initial view.
     panels.panels['xy'].axis((-110, -90, 30, 40))

@@ -7,6 +7,9 @@ from stormdrain.pipeline import Branchpoint
 class FigureUpdater(object):
     def __init__(self, figure):
         self.figure=figure
+        # Tell the figure to update (draw) when the bounds change.
+        bounds_updated_xchg = get_exchange('SD_bounds_updated')
+        bounds_updated_xchg.attach(self)
         
     def send(self, bounds):
         self.figure.canvas.draw()
