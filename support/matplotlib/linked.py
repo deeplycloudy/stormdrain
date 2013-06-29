@@ -65,6 +65,10 @@ class LinkedPanels(object):
         bounds = self.bounds
         # x_var, y_var = ax_mgr.coordinate_names['x'], ax_mgr.coordinate_names['y']
         axes = ax_mgr.axes
+        if axes not in self.ax_specs:
+            # the axes that were interacted with were not on this plot
+            return
+        
         x_var, y_var = self.ax_specs[axes]
         
         # Figure out if the axis limits have changed, and set any new bounds

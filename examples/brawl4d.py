@@ -2,11 +2,12 @@ import numpy as np
 
 from stormdrain.bounds import BoundsFilter
 from stormdrain.data import NamedArrayDataset
+from stormdrain.pipeline import Branchpoint
 
 from stormdrain.support.matplotlib.linked import LinkedPanels
 from stormdrain.support.matplotlib.mplevents import MPLaxesManager
 from stormdrain.support.matplotlib.artistupdaters import scatter_dataset_on_panels, FigureUpdater
-
+from stormdrain.support.coords.filters import CoordinateSystemController
 
 class Panels4D(LinkedPanels):
     # 1.618
@@ -30,6 +31,7 @@ class Panels4D(LinkedPanels):
         }
 
     def __init__(self, *args, **kwargs):
+        self.names_4D = kwargs.pop('names_4D', ('lon', 'lat', 'alt', 'time'))
         self.figure = kwargs.pop('figure', None)
         if self.figure is not None:
             fig = self.figure
@@ -39,15 +41,15 @@ class Panels4D(LinkedPanels):
             self.panels['zy'] = fig.add_axes(Panels4D.margin_defaults['zy'], sharey=self.panels['xy'])
             self.panels['tz'] = fig.add_axes(Panels4D.margin_defaults['tz'], sharey=self.panels['xz'])
             
-            ax_specs = { self.panels['xy']: ('lon', 'lat'), 
-                         self.panels['xz']: ('lon', 'alt'),
-                         self.panels['zy']: ('alt', 'lat'),
-                         self.panels['tz']: ('time', 'alt'), }
+            ax_specs = { self.panels['xy']: (self.names_4D[0], self.names_4D[1]), 
+                         self.panels['xz']: (self.names_4D[0], self.names_4D[2]),
+                         self.panels['zy']: (self.names_4D[2], self.names_4D[1]),
+                         self.panels['tz']: (self.names_4D[3], self.names_4D[2]), }
             kwargs['ax_specs'] = ax_specs
             
         super(Panels4D, self).__init__(*args, **kwargs)
-            
-                
+    
+    
                 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
@@ -73,9 +75,11 @@ if __name__ == '__main__':
     # to get the data to the plot. In this case, it's a simple filter on the plot bounds, and 
     # distribution to all the scatter artists. Might also add map projection here if the plot
     # were not directly showing lat, lon, alt.
-    scatter_outlet_broadcaster = scatter_dataset_on_panels(d, panels=panels, color_field='time')
+    scatter_outlet_broadcaster = scatter_dataset_on_panels(panels=panels, color_field='time')
     scatter_updater = scatter_outlet_broadcaster.broadcast()
-    bound_filter = BoundsFilter(target=scatter_updater, bounds=panels.bounds)
+    branch = Branchpoint([scatter_updater,])
+    brancher = branch.broadcast()
+    bound_filter = BoundsFilter(target=brancher, bounds=panels.bounds)
     filterer = bound_filter.filter()
     d.target = filterer
     
@@ -86,5 +90,24 @@ if __name__ == '__main__':
     # panels.panels['zy'].axis((0, 5e3, 30, 40,))
     # panels.panels['xz'].axis((-110, -90, 0, 5e3))
 
+
+
+    # Now let's set up a second figure that has projected data
+                        
+    panel2_fig = plt.figure()
+    panels2 = Panels4D(figure=panel2_fig, names_4D=('x', 'y', 'z', 'time'))
+    fig_updater2 = FigureUpdater(panel_fig)
+    
+    scatter_outlet_broadcaster2 = scatter_dataset_on_panels(panels=panels2, color_field='time')
+    scatter_updater2 = scatter_outlet_broadcaster2.broadcast()
+    
+    cs = CoordinateSystemController(33.5, -101.5, 0.0)
+    cs_transformer = cs.project_points(target=scatter_updater2, x_coord='x', y_coord='y', z_coord='z', 
+                        lat_coord='lat', lon_coord='lon', alt_coord='alt', distance_scale_factor=1.0e-3)
+
+    branch.targets.add(cs_transformer)
+    panels2.panels['xy'].axis((-1000, 1000, -1000, 1000))
+    panels2.panels['tz'].axis((0, 10, 0, 5))
+    
     
     plt.show()
