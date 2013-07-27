@@ -1,4 +1,4 @@
-""" Why brawl4d? It's inhereted from an old IDL-based 3D viewer that was designed to plot
+""" Why brawl4d? It's inherited from an old IDL-based 3D viewer that was designed to plot
     Balloons, Radar, and Aircraft with Lightning = BRAWL.
 
 """
