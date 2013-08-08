@@ -57,7 +57,12 @@ class Panels4D(LinkedPanels):
     
                 
 if __name__ == '__main__':
+    import matplotlib
+    fontspec = {'family':'Helvetica', 'weight':'bold', 'size':10}
+    matplotlib.rc('font', **fontspec)
+    
     import matplotlib.pyplot as plt
+    
     
     panel_fig = plt.figure()
     panels = Panels4D(figure=panel_fig)
