@@ -21,14 +21,29 @@ class BoundsFilter(Segment):
 
         There is another version of this class, to be written, that filters across
         all coordinates based on the bounds for all the axes.
+        
+        Could filter on 
+            1. all limits in bounds (restrict_to == None, the default)
+            2. intersection of a list of variable names and names in bounds
+                (restrict_to = ('name1', 'name2', ...))
+        Then check to see if the valid name and values from bounds should be transformed somehow
+            transform_mapping = {'name2':('alternate_name', transform_func)}
+            where transform_func accepts and returns a 2-tuple of min and max limit values from
+            the name in bounds to the name in transform_mapping. alternate_name is a name in the
+            array "a" that is passed in, and the function should transform from bounds to limits
+            on "a"
 
     """
     
     def __init__(self, *args, **kwargs):
         bounds = kwargs.pop('bounds', None)
+        restrict_to = kwargs.pop('restrict_to', None)
+        transform_mapping = kwargs.pop('transform_mapping', {})
         super(BoundsFilter, self).__init__(*args, **kwargs)
         self.bounds = bounds
-    
+        self.restrict_to = restrict_to
+        self.transform_mapping = transform_mapping
+        
     @coroutine
     def filter(self):
         """ We set up the bounds and target here to save on lookup overhead.
@@ -51,6 +66,13 @@ class BoundsFilter(Segment):
             print "Filter with limits {0}".format(lim)
             
             for k, (v_min, v_max) in lim:
+                if self.restrict_to is not None:
+                    if not(k in self.restrict_to):
+                        continue
+                if k in self.transform_mapping:
+                    new_k, transform_func = transform_mapping[k]
+                    v_min, v_max = transform_func((v_min, v_max))
+                    k = new_k
                 good &= (a[k] >= v_min) & (a[k] <= v_max)
 
             print a[good]
