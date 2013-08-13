@@ -5,7 +5,8 @@ from stormdrain.pipeline import Segment, coroutine
 SD_exchanges = {
     'SD_bounds_updated':"Bounds instance has been updated",
     }
-
+            
+        
 
 class BoundsFilter(Segment):
     """ Filter showing use of the axes bounds to filter data from an array.
@@ -63,7 +64,7 @@ class BoundsFilter(Segment):
             a = (yield)
             lim = bounds.limits()
             good = np.ones(a.shape, dtype=bool)
-            print "Filter with limits {0}".format(lim)
+            # print "Filter with limits {0}".format(lim)
             
             for k, (v_min, v_max) in lim:
                 if self.restrict_to is not None:
@@ -75,7 +76,6 @@ class BoundsFilter(Segment):
                     k = new_k
                 good &= (a[k] >= v_min) & (a[k] <= v_max)
 
-            print a[good]
             target.send(a[good])
 
 
