@@ -21,7 +21,7 @@ def scatter_dataset_on_panels(panels, color_field=None):
     empty = [0,]
     for ax in panels.ax_specs:
         # create a new scatter artist
-        art = ax.scatter(empty, empty, c=empty)
+        art = ax.scatter(empty, empty, c=empty, s=4, marker='s', edgecolors='none')
         
         # Need to update the color mapping using the specified color field. It needs to know that the
         # bounds have been updated in order to adjust the color limits.

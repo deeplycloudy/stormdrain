@@ -1,5 +1,10 @@
 from stormdrain.pubsub import get_exchange
 
+class BaseDate(object):
+    def __init__(self, date):
+        self.date=date
+
+
 class NamedArrayDataset(object):
     def __init__(self, data, target=None):
         self.target = target

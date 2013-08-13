@@ -1,4 +1,42 @@
+""" 
+Idea for standardized hookup and vis of pipelines.
+
+Requires that every segment's class takes target as the first argument to init, 
+and kwargs thereafter. 
+
+This might just be better handled by convention in writing them from scratch - use nested
+parentheses and good formatting instead of a programmatic solution. The getattr(methname) is
+pretty ugly, honestly. Why not simply register a list of instances and target coroutines? DRY?
+
+segments = [(Segment, 'segment_func', {}),
+            (BoundsFilter, 'filter', {'bounds':bounds}),
+            (BoundsFilter, 'filter', {'bounds':bounds}),
+            (Broadcast, 'broadcast', {})
+           ]
+
+End of the segment (first one inited) one does not require a target, and should be either Broadcast or an outlet.
+
+register(segments, prior_segment=None, subsequent_segment=None)
+
+from itertools import reversed
+def register(segments, subsequent_segment=None):
+    segchain = []
+    seg = subsequent_segment
+    for cls, meth, kws in reversed(segments):
+        seg_reference = cls(subsequent_segment, **kws)
+        crt = getattr(seg_reference, meth)
+        seg = crt()
+
+        segchain.append((seg_reference, seg))
+        
+    return segchain
+    
+        
+"""
+
+
 import time
+from collections import deque
 
 import numpy as np
 
@@ -33,7 +71,7 @@ class Segment(object):
     """
 
     def __init__(self, target=None): 
-        self.target = target # this perhaps should be a set and not a list, so it remains unique
+        self.target = target 
         
     # @coroutine
     # def process(self):
@@ -52,6 +90,59 @@ def broadcast(targets):
             target.send(stuff)
         del stuff
 
+
+class ItemModifier(Segment):
+    """ Performs modification of data in the pipe using item_name as an 
+        indexing value.
+    
+        The coroutine modify expects to recieve (indexable, value)
+        and peforms the operation indexable[item_name] = value before sending
+        indexable along to the next stage.
+        
+        Note that this is compatible with numpy arrays that have named dtypes.
+        Every array entry for that name is set to the same value, unless
+        value itself is an array with the same length as the named array.
+    """
+    
+    def __init__(self, *args, **kwargs):
+        self.name_to_modify = kwargs.pop('item_name', None)
+        super(ItemModifier, self).__init__(*args, **kwargs)
+    
+    @coroutine
+    def modify(self):
+        while True:
+            a, value = (yield)
+            if self.name_to_modify is not None:
+                a[self.name_to_modify] = value
+                self.target.send(a)
+                
+
+class CachedTriggerableSegment(object):
+    """ Mediates use of a pipelines by caching and resending on demand the last-received data
+
+        By turning the cache into a queue, and adding a last_how_many argument to resend, this routine
+        retains and can resends a complete history of pipeline activity, up to the cache_len limit (defaults to 1)
+
+        The caching behavior assumes that there is only one inlet and one outlet - it's a straight coupler.
+
+    """
+    def __init__(self, target=None, cache_len=1):
+        """ target is an activated coroutine."""
+        self.target = target
+        self.cache = deque([], cache_len)
+        # self.inlet = self.cache_segment()
+
+    @coroutine
+    def cache_segment(self):
+        while True:
+            stuff = (yield)
+            self.cache.append(stuff)
+            # self.resend()
+
+    def resend_last(self, n=1):
+        # convert to list so we can use slicing
+        for v in list(self.cache)[-n:]:
+            self.target.send(v)
 
 
 
