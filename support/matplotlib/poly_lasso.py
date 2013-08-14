@@ -5,7 +5,10 @@ from matplotlib.lines import Line2D
 from matplotlib.widgets import Widget
 from matplotlib.nxutils import points_inside_poly
 
-from stormdrain.pipeline import Segment, coroutine
+from stormdrain.pubsub import get_exchange
+from stormdrain.pipeline import Segment, coroutine, CachedTriggerableSegment
+
+
 
 class LassoFilter(Segment):
     """ Filter data points based on a polygon lasso. 
@@ -178,6 +181,82 @@ class PolyLasso(Widget):
         
             self.draw_update()
         
+
+class LassoPayloadController(object):
+    """ For convenience and descriptiveness, this object should be subclassed 
+        and define a single Payload() property that names the actual property:
+
+        class LassoSomePropertyController(LassoPayloadController):
+            some_property = LassoPayloadController.Payload()
+        prop_lasso_controller = LassoSomePropertyController( ... )
+        
+        View of this object could be a set of buttons that, e.g.
+            change the payload state.
+            
+        Setting the payload to None prevents the payload from being sent.
+            prop_lasso_controller.some_property = None 
+
+    """
+    @staticmethod
+    def Payload():
+        # Thanks Python Cookbook, 3rd. Ed!
+        storage_name = '_payload' # matches attribute definition of None below.
+
+        @property
+        def prop(self):
+            return getattr(self, storage_name)
+
+        @prop.setter
+        def prop(self, value):
+            setattr(self, storage_name, value)
+        return prop
+
+
+    def __init__(self, *args, **kwargs):
+        """ Register to receive lasso events. 
+
+            cache_segment is typically set to receive the results of all data
+            selection operations, as though it were a plot, so that the
+            current plot state can be subset. The instantiator of this class
+            should set the target of a data emitter to
+            payload_lasso.cache_segment.cache_segment(), The target of the
+            cache segment is a lasso_filter, followed by the addition of the
+            payload, and finally, the target kwarg passed when this class is
+            instantiated.
+
+            On receiving a new lasso, trigger a resend of the cached data 
+            to the dataset modifier.
+        """
+        self.target = kwargs.pop('target', None)
+        self._payload = None
+        self.lasso_filter = LassoFilter(target=self.add_payload_value(target=self.target))
+        self.lasso_xchg = get_exchange('B4D_panel_lasso_drawn')
+        self.lasso_xchg.attach(self)
+        self.cache_segment = CachedTriggerableSegment(target=self.lasso_filter.filter())
+
+    @coroutine
+    def add_payload_value(self, target=None):
+        while True:
+            a = (yield)
+            if (self._payload is not None) and (target is not None):
+                target.send((a, self._payload))
+
+    def send(self, msg):
+        """ B4D_panel_lasso_drawn messages are sent here. 
+
+            Set the state of the stormdrain.bounds.LassoFilter
+            object to grab the right points.
+        """
+        panels, ax, lasso_line, verts = msg
+
+        coord_names = panels.ax_specs[ax]
+        self.lasso_filter.coord_names = coord_names
+        self.lasso_filter.verts = verts
+        if self._payload is None:
+            # Don't send the payload - there's nothing to do.
+            return
+        else:
+            self.cache_segment.resend_last()
 
 
 class manager(object):
