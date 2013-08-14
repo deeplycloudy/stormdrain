@@ -1,8 +1,8 @@
 import numpy as np
 
-from stormdrain.pipeline import coroutine
+from stormdrain.bounds import Bounds
+from stormdrain.pipeline import coroutine, Branchpoint
 from stormdrain.pubsub import get_exchange
-from stormdrain.pipeline import Branchpoint
 
 class FigureUpdater(object):
     def __init__(self, figure):
@@ -13,6 +13,60 @@ class FigureUpdater(object):
         
     def send(self, bounds):
         self.figure.canvas.draw()
+
+
+def UpdatesMappable(name):
+    """ Name is the attribute to update in the mappable 
+        For use in PanelsScatterController instances to update self.mappable_updaters
+    """
+    # Thanks Python Cookbook, 3rd. Ed!
+    storage_name = '_'+name # matches attribute definition of None below.
+
+    @property
+    def prop(self):
+        return getattr(self, storage_name)
+
+    @prop.setter
+    def prop(self, value):
+        setattr(self, storage_name, value)
+        for mappable in self.mappable_updaters:
+            setattr(mappable, name, value)
+    return prop
+
+        
+class PanelsScatterController(object):
+    
+    
+    color_field = UpdatesMappable('color_field')
+    
+    def __init__(self, panels, color_field='time', default_color_bounds=None):
+        
+        if default_color_bounds is None:
+            default_color_bounds = Bounds()
+        self.default_color_bounds = default_color_bounds
+        self.mappable_updaters = set()
+        self.color_field = color_field
+        
+        bounds_updated_xchg = get_exchange('SD_bounds_updated')
+        all_outlets = []
+        empty = [0,]
+        for ax in panels.ax_specs:
+            # create a new scatter artist
+            art = ax.scatter(empty, empty, c=empty, s=4, marker='s', edgecolors='none')
+
+            # Need to update the color mapping using the specified color field. It needs to know that the
+            # bounds have been updated in order to adjust the color limits.
+            up = MappableRangeUpdater(art, color_field=color_field, default_bounds=default_color_bounds)
+            bounds_updated_xchg.attach(up)
+            self.mappable_updaters.add(up)
+
+            # Need to update the actual scatter coordinate data on each scatter artist
+            outlet = ScatterArtistOutlet(art, coord_names=panels.ax_specs[ax], color_field=color_field)
+            self.mappable_updaters.add(outlet)
+
+            all_outlets.append(outlet.update())
+
+        self.branchpoint = Branchpoint(all_outlets)
         
 
 def scatter_dataset_on_panels(panels, color_field=None):
@@ -90,12 +144,18 @@ class ScatterArtistOutlet(object):
             # ax.figure.canvas.draw()
     
 class MappableRangeUpdater(object):
-    def __init__(self, artist, color_field):
+    def __init__(self, artist, color_field, default_bounds=None):
         self.color_field = color_field
         self.artist = artist
-    
+        self.default_bounds = default_bounds
+        if self.default_bounds is None:
+            self.default_bounds = Bounds()
+        
     def send(self, bounds):
         lim = bounds[self.color_field]
+        if (lim[0] is None) and (lim[1] is None):
+            lim = self.default_bounds[self.color_field]
+        print "limits: {0}, {1}".format(*lim)
         self.artist.set_clim(lim[0], lim[1])
     
 

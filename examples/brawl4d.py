@@ -11,7 +11,7 @@ from stormdrain.pipeline import Branchpoint
 
 from stormdrain.support.matplotlib.linked import LinkedPanels
 from stormdrain.support.matplotlib.mplevents import MPLaxesManager
-from stormdrain.support.matplotlib.artistupdaters import scatter_dataset_on_panels, FigureUpdater
+from stormdrain.support.matplotlib.artistupdaters import PanelsScatterController, FigureUpdater
 from stormdrain.support.coords.filters import CoordinateSystemController
 
 class Panels4D(LinkedPanels):
@@ -85,7 +85,8 @@ if __name__ == '__main__':
     # to get the data to the plot. In this case, it's a simple filter on the plot bounds, and 
     # distribution to all the scatter artists. Might also add map projection here if the plot
     # were not directly showing lat, lon, alt.
-    scatter_outlet_broadcaster = scatter_dataset_on_panels(panels=panels, color_field='time')
+    scatter_ctrl = PanelsScatterController(panels=panels, color_field='time')
+    scatter_outlet_broadcaster = scatter_ctrl.branchpoint
     scatter_updater = scatter_outlet_broadcaster.broadcast()
     branch = Branchpoint([scatter_updater,])
     brancher = branch.broadcast()
@@ -109,7 +110,8 @@ if __name__ == '__main__':
     panels2 = Panels4D(figure=panel2_fig, names_4D=('x', 'y', 'z', 'time'))
     fig_updater2 = FigureUpdater(panel2_fig)
     
-    scatter_outlet_broadcaster2 = scatter_dataset_on_panels(panels=panels2, color_field='time')
+    scatter_ctrl2 = PanelsScatterController(panels=panels2, color_field='time')
+    scatter_outlet_broadcaster2 = scatter_ctrl2.branchpoint
     scatter_updater2 = scatter_outlet_broadcaster2.broadcast()
     
     cs = CoordinateSystemController(33.5, -101.5, 0.0)
