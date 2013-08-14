@@ -12,21 +12,23 @@ class BaseDate(object):
 
 _default_index_name = 'point_id'
 
-def indexed(func, index_name=_default_index_name):
+def indexed(index_name=_default_index_name):
     """ Decorator to add an index column to the data array in a NamedArrayDataset.
         Allows filtered arrays be linked to the original array after a lasso
 
         func returns an instance of NamedArrayDataset.
     """
-    @wraps(func)
-    def create_indexed(*args, **kwargs):
-        d = func(*args, **kwargs)
-        indices = np.arange(d.data.size)
-        d.data = append_fields(d.data, index_name, indices, usemask=False)
-        return d
-    return create_indexed
-
-
+    def wrapper(func):
+        @wraps(func)
+        def create_indexed(*args, **kwargs):
+            d = func(*args, **kwargs)
+            if d is not None:
+                indices = np.arange(d.data.size)
+                d.data = append_fields(d.data, index_name, indices, usemask=False)
+            return d
+        return create_indexed
+    return wrapper
+    
 class NamedArrayDataset(object):
     def __init__(self, data, target=None):
         self.target = target
