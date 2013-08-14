@@ -155,7 +155,6 @@ class MappableRangeUpdater(object):
         lim = bounds[self.color_field]
         if (lim[0] is None) and (lim[1] is None):
             lim = self.default_bounds[self.color_field]
-        print "limits: {0}, {1}".format(*lim)
         self.artist.set_clim(lim[0], lim[1])
     
 
