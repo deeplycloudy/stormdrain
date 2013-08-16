@@ -3,6 +3,7 @@ import numpy as np
 from stormdrain.bounds import Bounds
 from stormdrain.pipeline import coroutine, Branchpoint
 from stormdrain.pubsub import get_exchange
+from stormdrain.support.matplotlib.animation import PipelineAnimation, FixedDurationAnimation
 
 class FigureUpdater(object):
     def __init__(self, figure):
@@ -40,15 +41,17 @@ class PanelsScatterController(object):
     color_field = UpdatesMappable('color_field')
     
     def __init__(self, panels, color_field='time', default_color_bounds=None):
+        """ *panels* is a LinkedPanels instance. """
         
         if default_color_bounds is None:
             default_color_bounds = Bounds()
         self.default_color_bounds = default_color_bounds
         self.mappable_updaters = set()
         self.color_field = color_field
+        self.panels=panels
         
         bounds_updated_xchg = get_exchange('SD_bounds_updated')
-        all_outlets = []
+        artist_outlets = []
         empty = [0,]
         for ax in panels.ax_specs:
             # create a new scatter artist
@@ -64,9 +67,42 @@ class PanelsScatterController(object):
             outlet = ScatterArtistOutlet(art, coord_names=panels.ax_specs[ax], color_field=color_field)
             self.mappable_updaters.add(outlet)
 
-            all_outlets.append(outlet.update())
+            artist_outlets.append(outlet.update())
+            self.artist_outlets=artist_outlets
 
-        self.branchpoint = Branchpoint(all_outlets)
+        self.branchpoint = Branchpoint(artist_outlets)
+        
+    def animate(self, duration, figure=None):
+        """ Animate the scatter collection, taking *duration* seconds to do so.
+            LinkedPanels works across figures, but matplotlib's animation tools are
+            figure-centric, so a figure is chosen arbitrarily from the set of
+            figures associated with the axes in self.panels.panels. The figure
+            can be specified by the kwarg *figure* if desired.
+            
+        """
+        # LinkedPanels is figure-agnostic (works across figures), so get all figures
+        # from panels
+        fig_set = set()
+        for k in self.panels.panels:
+            fig_k = self.panels.panels[k].figure
+            fig_set.add(fig_k)
+        if figure is None:
+            figure = tuple(fig_set)[0]
+                
+                
+        pipe_anim = PipelineAnimation(
+                        duration, self.artist_outlets, 
+                        variable='time',
+                        limits=self.panels.bounds.time,
+                        branchpoint_data_source=self.branchpoint)
+
+        # Send a refresh of the data down the pipe to load the animation's
+        # cache of the current data display.
+        get_exchange('SD_bounds_updated').send(self.panels.bounds)
+        
+        the_animator = FixedDurationAnimation(figure, duration, pipe_anim, interval=50, repeat=False)
+        
+        return the_animator
         
 
 def scatter_dataset_on_panels(panels, color_field=None):
