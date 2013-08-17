@@ -23,12 +23,24 @@ class FixedDurationAnimation(TimedAnimation):
         super(FixedDurationAnimation, self).__init__(fig, **kwargs)
         
     def new_frame_seq(self):
-        fps = 1000. / self._interval
-        n_frames = self._duration * fps
+        # the code below works, but takes unpredictably too long
+        # if the frames take longer to draw than self._interval.
+        # fps = 1000. / self._interval
+        # n_frames = self._duration * fps
+        # fractions = list(np.arange(0.0, 1.0, 1.0/n_frames)) 
+        # fractions += [1.0] #ensure we always get to 100% complete
+        # return iter(fractions)
         
-        fractions = list(np.arange(0.0, 1.0, 1.0/n_frames)) 
-        fractions += [1.0] #ensure we always get to 100% complete
-        return iter(fractions)
+        def frame_iter():
+            duration = self._duration
+            start = time.time()
+            time_fraction = 0.0
+            while time_fraction < 1.0:
+                time_fraction = (time.time() - start) / duration
+                time_fraction = min(time_fraction, 1.0) # never exceed 1.0
+                yield time_fraction
+            
+        return frame_iter()
 
     def _draw_frame(self, framedata):
         fraction = framedata
