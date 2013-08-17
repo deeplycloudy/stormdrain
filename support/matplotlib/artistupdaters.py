@@ -72,7 +72,7 @@ class PanelsScatterController(object):
 
         self.branchpoint = Branchpoint(artist_outlets)
         
-    def animate(self, duration, figure=None):
+    def animate(self, duration, repeat=False, figure=None):
         """ Animate the scatter collection, taking *duration* seconds to do so.
             LinkedPanels works across figures, but matplotlib's animation tools are
             figure-centric, so a figure is chosen arbitrarily from the set of
@@ -100,7 +100,7 @@ class PanelsScatterController(object):
         # cache of the current data display.
         get_exchange('SD_bounds_updated').send(self.panels.bounds)
         
-        the_animator = FixedDurationAnimation(figure, duration, pipe_anim, interval=50, repeat=False)
+        the_animator = FixedDurationAnimation(figure, duration, pipe_anim, interval=50, repeat=repeat)
         
         return the_animator
         

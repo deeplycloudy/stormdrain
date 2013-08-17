@@ -14,13 +14,25 @@ class FixedDurationAnimation(TimedAnimation):
             The draw operation is delegated to *coordinator*, a class which should implement
                 init_draw(self, animator)
                 draw_frame(self, animator, fraction_of_total_animation)
+                cleanup(self, animator)
             to clear the figure and draw the frames, respectively.
+            Cleanup is called when the animation has finished.
         """
         
         self._duration = float(duration)
         self._coordinator = coordinator
         
         super(FixedDurationAnimation, self).__init__(fig, **kwargs)
+        
+    def _step(self, *args):
+        # add an opportunity to cleanup if the animation has stopped.
+        # the repeat functionality of TimedAnimation is ensured by calling 
+        # the superclass first.
+        still_going = super(FixedDurationAnimation, self)._step(*args)
+        if not still_going:
+            self._coordinator.cleanup(self)
+        return still_going
+        
         
     def new_frame_seq(self):
         # the code below works, but takes unpredictably too long
@@ -72,9 +84,9 @@ class PipelineAnimation(object):
         if branchpoint_data_source is not None:
             branchpoint_data_source.targets.add(self.cache_segment)
             
-    def done_drawing(self):
+    def cleanup(self, animator):
         self.branchpoint_data_source.targets.remove(self.cache_segment)
-        
+                
     @coroutine
     def _filter_to_fraction(self, variable, limits):
         start = limits[0]
