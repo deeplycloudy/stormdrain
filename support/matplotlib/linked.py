@@ -52,7 +52,7 @@ class LinkedPanels(object):
         self.interaction_xchg = get_exchange('MPL_interaction_complete')
         self.interaction_xchg.attach(self)
         self.bounds_updated_xchg = get_exchange('SD_bounds_updated') 
-
+    
     def reset_axes_events(self):
         for mgr in self.axes_managers.values():
             mgr.events.reset()
@@ -68,7 +68,7 @@ class LinkedPanels(object):
         if axes not in self.ax_specs:
             # the axes that were interacted with were not on this plot
             return
-        
+
         x_var, y_var = self.ax_specs[axes]
         
         # Figure out if the axis limits have changed, and set any new bounds
@@ -76,25 +76,14 @@ class LinkedPanels(object):
         old_x, old_y = getattr(bounds, x_var), getattr(bounds, y_var)
         new_x, new_y = new_limits[0:2], new_limits[2:4]
         
-        # Update all axis limits for all axes whose coordinates match those of the changed
-        # axes
+        
+        # Update all axis limits for all axes whose coordinates match those 
+        # of the changed axes
         axes_to_update = set()
         axes_to_update.update(self.ax_coords[x_var])
         axes_to_update.update(self.ax_coords[y_var])
-                
-        # # Handle special case of the z axis that's part of the zy axes,
-        # # which isn't shared with any other axis
-        # if ax_mgr is self.axes_managers['zy']:
-        #     # Update one of the shared Z axes since zy changed
-        #     self.axes_managers['tz'].axes.set_ylim(new_x)
-        #     self.reset_axes_events()
-        #     # axes.figure.canvas.draw()
-        # if (ax_mgr is self.axes_managers['tz']) | (ax_mgr is self.axes_managers['xz']):
-        #     # One of the shared axes changed, so update zy
-        #     self.axes_managers['zy'].axes.set_xlim(new_y)
-        #     self.reset_axes_events()
-        #     # axes.figure.canvas.draw()        
-
+        
+        
         if (new_x != old_x) | (new_y != old_y):
             setattr(bounds, x_var, new_x)
             setattr(bounds, y_var, new_y)
