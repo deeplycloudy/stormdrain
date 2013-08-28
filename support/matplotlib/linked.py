@@ -41,6 +41,9 @@ class LinkedPanels(object):
         self.bounds = Bounds()
         self.ax_specs = ax_specs
         
+        # These axes are to be kept equal in aspect
+        self.equal_ax = set()
+        
         self.ax_coords = defaultdict(set)
         for ax, names in self.ax_specs.iteritems():
             assert len(names) == self._D
@@ -76,6 +79,21 @@ class LinkedPanels(object):
         old_x, old_y = getattr(bounds, x_var), getattr(bounds, y_var)
         new_x, new_y = new_limits[0:2], new_limits[2:4]
         
+        # figure out the necessary modifications to keep the axes square
+        if axes in self.equal_ax:
+            bbox_aspect = axes.bbox.height/axes.bbox.width
+            new_dx, new_dy = new_x[1] - new_x[0], new_y[1] - new_y[0]
+            # goal is dy/dx = bbox_aspect
+            if new_dy/new_dx > bbox_aspect:
+                # expand new_dx to get the right aspect
+                goal_dx = new_dy/bbox_aspect
+                half_delta_dx = 0.5*(goal_dx-new_dx)
+                new_x = new_x[0] - half_delta_dx, new_x[1] + half_delta_dx
+            else:
+                # expand new_dy to get the right aspect
+                goal_dy = bbox_aspect*new_dx
+                half_delta_dy = 0.5*(goal_dy-new_dy)
+                new_y = new_y[0] - half_delta_dy, new_y[1] + half_delta_dy
         
         # Update all axis limits for all axes whose coordinates match those 
         # of the changed axes
