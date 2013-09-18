@@ -40,8 +40,8 @@ class PanelsScatterController(object):
     
     color_field = UpdatesMappable('color_field')
     
-    def __init__(self, panels, color_field='time', default_color_bounds=None):
-        """ *panels* is a LinkedPanels instance. """
+    def __init__(self, panels, color_field='time', default_color_bounds=None, s=4, **kwargs):
+        """ *panels* is a LinkedPanels instance. extra kwargs are passed to the call to scatter"""
         
         if default_color_bounds is None:
             default_color_bounds = Bounds()
@@ -55,7 +55,7 @@ class PanelsScatterController(object):
         empty = [0,]
         for ax in panels.ax_specs:
             # create a new scatter artist
-            art = ax.scatter(empty, empty, c=empty, s=4, marker='s', edgecolors='none')
+            art = ax.scatter(empty, empty, c=empty, s=s, edgecolors='none', **kwargs)
 
             # Need to update the color mapping using the specified color field. It needs to know that the
             # bounds have been updated in order to adjust the color limits.

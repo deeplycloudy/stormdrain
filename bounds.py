@@ -75,7 +75,7 @@ class BoundsFilter(Segment):
                     v_min, v_max = transform_func((v_min, v_max))
                     k = new_k
                 good &= (a[k] >= v_min) & (a[k] <= v_max)
-
+            
             target.send(a[good])
 
 

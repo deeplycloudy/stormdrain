@@ -28,7 +28,8 @@ def indexed(index_name=_default_index_name):
             return d
         return create_indexed
     return wrapper
-    
+
+        
 class NamedArrayDataset(object):
     def __init__(self, data, target=None):
         self.target = target
@@ -59,8 +60,7 @@ class NamedArrayDataset(object):
             else:
                 # update everything
                 self.data[indices] = a
-                
-        
+                        
     def send(self, msg):
         """ SD_bounds_updated messages are sent here """
         # print 'Data object got message {0}'.format(msg)
