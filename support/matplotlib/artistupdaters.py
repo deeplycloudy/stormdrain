@@ -1,7 +1,7 @@
 import numpy as np
 
 from stormdrain.bounds import Bounds
-from stormdrain.pipeline import coroutine, Branchpoint
+from stormdrain.pipeline import coroutine, Branchpoint, CachedTriggerableSegment
 from stormdrain.pubsub import get_exchange
 from stormdrain.support.matplotlib.animation import PipelineAnimation, FixedDurationAnimation
 
@@ -56,7 +56,7 @@ class PanelsScatterController(object):
         for ax in panels.ax_specs:
             # create a new scatter artist
             art = ax.scatter(empty, empty, c=empty, s=s, edgecolors='none', antialiased=antialiased, **kwargs)
-
+            
             # Need to update the color mapping using the specified color field. It needs to know that the
             # bounds have been updated in order to adjust the color limits.
             up = MappableRangeUpdater(art, color_field=color_field, default_bounds=default_color_bounds)
@@ -71,6 +71,12 @@ class PanelsScatterController(object):
             self.artist_outlets=artist_outlets
 
         self.branchpoint = Branchpoint(artist_outlets)
+        
+        # self.cache_trigger = CachedTriggerableSegment(target=self.filterer)
+        # self.cache_segment = self.cache_trigger.cache_segment()
+        # if branchpoint_data_source is not None:
+        #     branchpoint_data_source.targets.add(self.cache_segment)
+        
         
     def animate(self, duration, repeat=False, figure=None):
         """ Animate the scatter collection, taking *duration* seconds to do so.
@@ -211,3 +217,19 @@ class LineArtistOutlet(object):
             x, y = a[coords['x']], a[coords['y']]
             self.artist.set_data(x, y)
             ax.figure.canvas.draw()
+
+class LineArtistUpdater(object):
+    def __init__(self, artist, coord_names=('x','y')):
+        """ coords is tuple of coordinate names in the named-dtype array
+            received by the coroutine
+        """
+        self.artist = artist
+        self.coord_names = coord_names
+
+    @coroutine
+    def update(self):
+        # print "now processing {0}".format(self.artist)
+        while True:
+            a = (yield)
+            x, y = a[self.coord_names[0]], a[self.coord_names[1]]
+            self.artist.set_data(x, y)
