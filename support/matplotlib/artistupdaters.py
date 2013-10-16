@@ -9,8 +9,7 @@ class FigureUpdater(object):
     def __init__(self, figure):
         self.figure=figure
         # Tell the figure to update (draw) when the bounds change.
-        bounds_updated_xchg = get_exchange('SD_bounds_updated')
-        bounds_updated_xchg.attach(self)
+        get_exchange('SD_reflow_done').attach(self)
         
     def send(self, bounds):
         self.figure.canvas.draw()
@@ -104,7 +103,11 @@ class PanelsScatterController(object):
 
         # Send a refresh of the data down the pipe to load the animation's
         # cache of the current data display.
-        get_exchange('SD_bounds_updated').send(self.panels.bounds)
+        get_exchange('SD_reflow_start').send("Pre-animation data reflow")
+
+        # skip the reflow done message, since nothing should have changed about the data
+        # or bounds from the previous reflow. Prevents an extra draw of the figure.
+        # get_exchange('SD_reflow_done').send("Pre-animation data reflow done")
         
         the_animator = FixedDurationAnimation(figure, duration, pipe_anim, interval=50, repeat=repeat)
         

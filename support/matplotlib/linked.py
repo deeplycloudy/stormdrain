@@ -55,13 +55,17 @@ class LinkedPanels(object):
         self.interaction_xchg = get_exchange('MPL_interaction_complete')
         self.interaction_xchg.attach(self)
         self.bounds_updated_xchg = get_exchange('SD_bounds_updated') 
-    
+        self.reflow_start_xchg = get_exchange('SD_reflow_start')
+        self.reflow_done_xchg = get_exchange('SD_reflow_done')
+            
     def reset_axes_events(self):
         for mgr in self.axes_managers.values():
             mgr.events.reset()
             
     def bounds_updated(self):
         self.bounds_updated_xchg.send(self.bounds)
+        self.reflow_start_xchg.send('LinkedPanels triggered data reflow')
+        self.reflow_done_xchg.send('LinkedPanels reflow done')
 
     def send(self, ax_mgr):
         """ MPL_interaction_complete messages are sent here """
