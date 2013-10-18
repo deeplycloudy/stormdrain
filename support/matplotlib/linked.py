@@ -46,10 +46,14 @@ class LinkedPanels(object):
         
         self.ax_coords = defaultdict(set)
         for ax, names in self.ax_specs.iteritems():
-            assert len(names) == self._D
-            for d in range(self._D):
-                self.ax_coords[names[d]].add(ax)
-                self.axes_managers[names] = MPLaxesManager(ax) 
+            self.add_axes(ax, names)
+                
+    def add_axes(self, ax, names):
+        self.ax_specs[ax] = names
+        assert len(names) == self._D
+        for d in range(self._D):
+            self.ax_coords[names[d]].add(ax)
+            self.axes_managers[names] = MPLaxesManager(ax)
         
     def _setup_events(self):
         self.interaction_xchg = get_exchange('MPL_interaction_complete')
