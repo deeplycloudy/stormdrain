@@ -69,7 +69,12 @@ class BoundsFilter(Segment):
                     new_k, transform_func = transform_mapping[k]
                     v_min, v_max = transform_func((v_min, v_max))
                     k = new_k
+                if k not in a.dtype.names:
+                    # ensure that this array even has data of bounds_type=k
+                    # implicitly ignores this bound, instead of returning empty
+                    continue
                 good &= (a[k] >= v_min) & (a[k] <= v_max)
+            
             
             target.send(a[good])
 
