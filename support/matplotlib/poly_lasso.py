@@ -3,7 +3,7 @@ matplotlib.use('WxAgg')
 
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Widget
-from matplotlib.nxutils import points_inside_poly
+from matplotlib import path
 
 from stormdrain.pubsub import get_exchange
 from stormdrain.pipeline import Segment, coroutine, CachedTriggerableSegment
@@ -31,7 +31,10 @@ class LassoFilter(Segment):
             
             coord0 = self.coord_names[0]
             coord1 = self.coord_names[1]
-            in_poly_mask = points_inside_poly(zip(a[coord0], a[coord1]), self.verts) == 1                    
+            p = path.Path(self.verts)
+            xys = zip(a[coord0], a[coord1])
+            in_poly_mask = p.contains_points(xys) == 1
+                              
             self.target.send(a[in_poly_mask])
 
 
@@ -276,7 +279,10 @@ class manager(object):
     def callback(self, ax, lasso_line, verts):
         
         print verts
-        mask = points_inside_poly(zip(self.x, self.y), verts) == 1
+        p = path.Path(verts)
+        xys = zip(self.x, self.y)
+        mask = p.contains_points(xys)
+
         print self.x[mask]
         print self.y[mask]
         self.charge[mask] = -1
