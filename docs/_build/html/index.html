@@ -1,0 +1,220 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Stormdrain: a pipeline for evented data processing &mdash; stormdrain 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="stormdrain 0.1.0 documentation" href="#" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="#">stormdrain 0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="stormdrain-a-pipeline-for-evented-data-processing">
+<h1>Stormdrain: a pipeline for evented data processing<a class="headerlink" href="#stormdrain-a-pipeline-for-evented-data-processing" title="Permalink to this headline">¶</a></h1>
+<p>Stormdrain implements an opinionated data flow model that sits between domain-specific dataset models and general-purpose visualization packages.</p>
+<p>It arose from the need to interactively explore irregular, multidimensional data from the atmospheric sciences, with a parallel goal of being a pure Python library that doesn&#8217;t try to do to much. It provides programmatic hooks for access to data subsets that are selected interactively. As such, it is naturally used within IPython notebooks, which support both interactivity and scriptability.</p>
+<p>Stormdrain does not require adoption of a specific plotting package or data model, but instead provides a data transport abstraction. Data sit at the inlet of a pipeline, while the outlet of the pipeline could be something that knows how to update a plot, or a log file. Pipeline segments along the way serve as transforms and filters. A publish-subscribe event infrastructure allows intermediate segments to respond to changes determined by user interaction, and reflow data in response to these changes.</p>
+<p>Such agnosticism avoids the need to adopt a new base-object class for the entire analysis stack or the need to learn the grammar of a new plotting package in order to gain the benefits of interactivity. Experts with certain datatypes simply use their existing data classes as the substance that flows through the pipe!</p>
+</div>
+<div class="section" id="build-a-pipeline">
+<h1>Build a pipeline<a class="headerlink" href="#build-a-pipeline" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="use-a-coroutine-as-a-pipeline-segment">
+<h2>Use a coroutine as a pipeline segment<a class="headerlink" href="#use-a-coroutine-as-a-pipeline-segment" title="Permalink to this headline">¶</a></h2>
+<p>Each pipeline segment is a coroutine, which is a function that is decorated with <cite>pipeline.coroutine</cite>. Data are <em>pushed</em> down the pipe, instead of <em>pulled</em> (as with ordinary iteration using generators). Each segment can be an ordinary function:</p>
+<div class="highlight-python"><pre>@coroutine
+def scale(target, scale=1.0)
+    """ Receive a numpy array, and multiply it by a scaling factor"""
+    while True:
+        a = (yield)
+        target.send(a*scale)</pre>
+</div>
+<p>The pattern <cite>input = (yield)</cite>, some processing, and <cite>target.send(output)</cite> within an infinite loop is the basic template for each pipeline segment.</p>
+<p>It is best if each pipeline segment implements a small, defined task. This makes the analysis chain easier to debug and test, and easier to reuse!</p>
+</div>
+<div class="section" id="a-class-dynamically-modifies-the-flow-in-a-segment">
+<h2>A class dynamically modifies the flow in a segment<a class="headerlink" href="#a-class-dynamically-modifies-the-flow-in-a-segment" title="Permalink to this headline">¶</a></h2>
+<p>For many interactive applications, it&#8217;s helpful to have a class with coroutines as methods of the class. Then the class can store persistent state that can be changed in response to user interaction, and any data that flows down the pipe will pick up the changes.</p>
+<p>There are pre-defined classes for broadcasting data to multiple targets, cached, triggerable pipeline segments, and other things. See the classes in <cite>stormdrain.pipeline</cite>.</p>
+</div>
+<div class="section" id="each-class-can-register-for-event-notification">
+<h2>Each class can register for event notification<a class="headerlink" href="#each-class-can-register-for-event-notification" title="Permalink to this headline">¶</a></h2>
+<p>Using a class also makes it possible to register for events. Each class only can respond to one event (since the pub-sub event model simply calls <cite>.send</cite> on the registered object).</p>
+<p>Each class only can respond to one event (since the pub-sub event model simply calls <cite>.send</cite> on the registered object). If you think your class needs to respond to more than one event, simply write a new class</p>
+<p>All three ideas are demonstrated in the following class.:</p>
+<div class="highlight-python"><pre>from stormdrain.pubsub import get_exchange
+class Histogrammer(object):
+    def __init__(self, target, x_range=(0.0, 100.0), dx=1.0)
+        self.x_range = hist_range
+        self.dx = 1.0
+
+        # Whoever emits this event passes a tuple of new limits
+        # each registered object's .send method.
+        xchg = get_exchange('my_limit_update_event')
+        xchg.attach(self)
+
+    @coroutine
+    def histogram_for_array(self):
+        """ Receive a numpy array, and send (histo, edges) from numpy.histogram"""
+        while True:
+            a = (yield)
+            bins = np.arange(self.x_range[0], self.x_range[1], self.dx)
+            histo, edges = np.histogram(a, bins=bins)
+            self.target.send((histo, edges))
+
+    def send(self, new_limits):
+        self.x_range = new_limits
+        self.dx = (new_limits[1] - new_limits[0])/10.0</pre>
+</div>
+</div>
+<div class="section" id="pipeline-segments-are-hooked-up-in-reverse-order">
+<h2>Pipeline segments are hooked up in reverse order<a class="headerlink" href="#pipeline-segments-are-hooked-up-in-reverse-order" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s create the following pipeline:</p>
+<div class="highlight-python"><pre>`data -&gt; [scale] -&gt; [Histogrammer] -&gt; [printer]`</pre>
+</div>
+<p>We&#8217;ll print output and manually send some data down the pipe a few times. Instead of printer, you could also have an outlet that knows how to update a plot.:</p>
+<div class="highlight-python"><pre>import numpy as np
+
+@coroutine
+def print():
+    # No target - just prints output and waits for more to print
+    while True:
+        a = (yield)
+        print a
+
+printer = print()
+histogrammer = Histogrammer(target=printer)
+scaler = scale(target=histogrammer.histogram_for_array())
+
+data = np.random.random(size=100) * 100.0
+# flow the data with
+scaler.send(data)
+
+limits = get_exchange('my_limit_update_event')
+limits.send((3.0, 50.0))
+scaler.send(data)
+limits.send((53.0, 98.5))
+scaler.send(data)</pre>
+</div>
+</div>
+<div class="section" id="you-can-get-at-the-data-in-a-pipe">
+<h2>You can get at the data in a pipe<a class="headerlink" href="#you-can-get-at-the-data-in-a-pipe" title="Permalink to this headline">¶</a></h2>
+<p>You can create a class that receives the most-recent output, and stores it an an instance variable. This is basically what the <cite>stormdrain.pipeline.CachedTriggerableSegment</cite> does, except it also serves as an intermediate segment that passes its data along.</p>
+<p>Strategically-placed <cite>stormdrain.pipeline.Branchpoint</cite> classes along the pipeline also make it possible to attach arbitrarily many listeners at any later time, as long as they can access the <cite>Branchpoint</cite> instance.</p>
+<p>An example would be helpful here.</p>
+</div>
+</div>
+<div class="section" id="a-complete-interesting-example">
+<h1>A complete, interesting example<a class="headerlink" href="#a-complete-interesting-example" title="Permalink to this headline">¶</a></h1>
+<p>brawl4d.py in this project&#8217;s examples directory shows how to use stormdrain with matplotlib to control subsetting of multidimensional data.</p>
+<p>There is a pre-defined class for storing a numpy structured (named) array at the inlet of a pipe (<cite>stormdrain.data.NamedArrayDataset</cite>). That inlet segment is automatically notified when a data reflow is needed. Such reflows usually follow a notification that the displayed region of the dataset (stored in a <cite>stormdrain.bounds.Bounds</cite> object) has changed. The <cite>LinkedPanels</cite> class in the included <cite>matplotlib</cite> support shows emits the necessary bounds-changed and reflow events after user interaction on a plot.</p>
+<p>There is a separate <a class="reference external" href="https://github.com/deeplycloudy/brawl4d">brawl4d</a> project that implements an complete version of this idea for datasets used to blend lightning mapping and thunderstorm observations.</p>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Stormdrain: a pipeline for evented data processing</a></li>
+<li><a class="reference internal" href="#build-a-pipeline">Build a pipeline</a><ul>
+<li><a class="reference internal" href="#use-a-coroutine-as-a-pipeline-segment">Use a coroutine as a pipeline segment</a></li>
+<li><a class="reference internal" href="#a-class-dynamically-modifies-the-flow-in-a-segment">A class dynamically modifies the flow in a segment</a></li>
+<li><a class="reference internal" href="#each-class-can-register-for-event-notification">Each class can register for event notification</a></li>
+<li><a class="reference internal" href="#pipeline-segments-are-hooked-up-in-reverse-order">Pipeline segments are hooked up in reverse order</a></li>
+<li><a class="reference internal" href="#you-can-get-at-the-data-in-a-pipe">You can get at the data in a pipe</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#a-complete-interesting-example">A complete, interesting example</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="#">stormdrain 0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Eric Bruning.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
