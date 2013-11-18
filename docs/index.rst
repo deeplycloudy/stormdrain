@@ -136,13 +136,6 @@ There is a separate brawl4d_ project that implements an complete version of this
 
 
 
-Contents:
-
-.. toctree::
-   :maxdepth: 2
-
-
-
 Indices and tables
 ==================
 
