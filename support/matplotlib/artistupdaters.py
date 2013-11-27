@@ -48,6 +48,7 @@ class PanelsScatterController(object):
         self.mappable_updaters = set()
         self.color_field = color_field
         self.panels=panels
+        self.artist_outlet_controllers = set()
         
         bounds_updated_xchg = get_exchange('SD_bounds_updated')
         artist_outlets = []
@@ -64,6 +65,7 @@ class PanelsScatterController(object):
 
             # Need to update the actual scatter coordinate data on each scatter artist
             outlet = ScatterArtistOutlet(art, coord_names=panels.ax_specs[ax], color_field=color_field)
+            self.artist_outlet_controllers.add(outlet)
             self.mappable_updaters.add(outlet)
 
             artist_outlets.append(outlet.update())
