@@ -66,7 +66,7 @@ class BoundsFilter(Segment):
                     if not(k in self.restrict_to):
                         continue
                 if k in self.transform_mapping:
-                    new_k, transform_func = transform_mapping[k]
+                    new_k, transform_func = self.transform_mapping[k]
                     v_min, v_max = transform_func((v_min, v_max))
                     k = new_k
                 if k not in a.dtype.names:
