@@ -21,6 +21,14 @@ class LassoFilter(Segment):
         super(LassoFilter, self).__init__(*args, **kwargs)
         
         self.verts = None
+        
+    def filter_mask(self, a):
+        coord0 = self.coord_names[0]
+        coord1 = self.coord_names[1]
+        p = path.Path(self.verts)
+        xys = zip(a[coord0], a[coord1])
+        in_poly_mask = p.contains_points(xys) == 1
+        return in_poly_mask
     
     @coroutine
     def filter(self):
@@ -28,13 +36,7 @@ class LassoFilter(Segment):
         while True:
             a = (yield)
             # good = np.ones(a.shape, dtype=bool)
-            
-            coord0 = self.coord_names[0]
-            coord1 = self.coord_names[1]
-            p = path.Path(self.verts)
-            xys = zip(a[coord0], a[coord1])
-            in_poly_mask = p.contains_points(xys) == 1
-                              
+            in_poly_mask = self.filter_mask(a)           
             self.target.send(a[in_poly_mask])
 
 
