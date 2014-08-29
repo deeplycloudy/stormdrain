@@ -261,8 +261,11 @@ class LassoPayloadController(object):
             self.cache_segment.resend_last()
 
 
-class manager(object):
+class manager(object):    
     def __init__(self):
+        import numpy
+        from matplotlib.pyplot import figure, show
+        
         self.x = numpy.arange(10.0)
         self.y = self.x**2.0
         self.charge = numpy.zeros_like(self.x)
@@ -295,8 +298,5 @@ class manager(object):
     
 
 if __name__ == '__main__':
-    import numpy
-    from matplotlib.nxutils import points_inside_poly
-    from matplotlib.pyplot import figure, show
     m = manager()
     show()
