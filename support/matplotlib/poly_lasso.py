@@ -1,6 +1,3 @@
-import matplotlib
-matplotlib.use('WxAgg')
-
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Widget
 from matplotlib import path
