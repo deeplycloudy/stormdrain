@@ -1,9 +1,12 @@
+from __future__ import absolute_import
+from __future__ import print_function
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Widget
 from matplotlib import path
 
 from stormdrain.pubsub import get_exchange
 from stormdrain.pipeline import Segment, coroutine, CachedTriggerableSegment
+from six.moves import zip
 
 
 
@@ -15,15 +18,15 @@ class LassoFilter(Segment):
     """
     def __init__(self, *args, **kwargs):
         self.coord_names = kwargs.pop('coord_names', [])
+        self.verts = kwargs.pop('verts', None)
         super(LassoFilter, self).__init__(*args, **kwargs)
         
-        self.verts = None
         
     def filter_mask(self, a):
         coord0 = self.coord_names[0]
         coord1 = self.coord_names[1]
         p = path.Path(self.verts)
-        xys = zip(a[coord0], a[coord1])
+        xys = list(zip(a[coord0], a[coord1]))
         in_poly_mask = p.contains_points(xys) == 1
         return in_poly_mask
     
@@ -59,7 +62,7 @@ class PolyLasso(Widget):
         *line_to_next* controls whether or not a line is drawn to the current
         cursor position as the polygon is created
         
-        *useblit* = *True* is the only thorougly tested option.
+        *useblit* = *True* is the only thoroughly tested option.
         
         """
         self.axes = None
@@ -122,7 +125,7 @@ class PolyLasso(Widget):
     
     def draw_update(self):
         """ Adjust the polygon line, and blit it to the screen """
-        self.line.set_data(zip(*self.verts))
+        self.line.set_data(list(zip(*self.verts)))
         if self.useblit:
             self.canvas.restore_region(self.background)
             if self.axes is not None:
@@ -162,7 +165,7 @@ class PolyLasso(Widget):
                 self.do_callback(event)
                 # self.finalize()
             else:
-                print 'Need at least three vertices to make a polygon'
+                print('Need at least three vertices to make a polygon')
                 self.cleanup()
             return
         
@@ -280,15 +283,15 @@ class manager(object):
     
     def callback(self, ax, lasso_line, verts):
         
-        print verts
+        print(verts)
         p = path.Path(verts)
-        xys = zip(self.x, self.y)
+        xys = list(zip(self.x, self.y))
         mask = p.contains_points(xys)
 
-        print self.x[mask]
-        print self.y[mask]
+        print((self.x[mask]))
+        print((self.y[mask]))
         self.charge[mask] = -1
-        print self.charge
+        print((self.charge))
         self.lasso_line = lasso_line
         
         # not actually necessary ... scatter stores a ref to charge array
@@ -298,5 +301,8 @@ class manager(object):
     
 
 if __name__ == '__main__':
+    import matplotlib
+    matplotlib.use('Qt4Agg')
+    from matplotlib.pyplot import figure, show
     m = manager()
     show()

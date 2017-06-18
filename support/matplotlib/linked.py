@@ -1,8 +1,11 @@
+from __future__ import absolute_import
 from collections import defaultdict
 
 from stormdrain.bounds import Bounds
 from stormdrain.pubsub import get_exchange
-from mplevents import MPLaxesManager
+from .mplevents import MPLaxesManager
+import six
+from six.moves import range
 
 
 
@@ -45,7 +48,7 @@ class LinkedPanels(object):
         self.equal_ax = set()
         
         self.ax_coords = defaultdict(set)
-        for ax, names in self.ax_specs.iteritems():
+        for ax, names in six.iteritems(self.ax_specs):
             self.add_axes(ax, names)
                 
     def add_axes(self, ax, names):

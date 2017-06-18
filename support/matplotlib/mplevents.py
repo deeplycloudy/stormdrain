@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from stormdrain.pubsub import get_exchange
 
 # Names of recognized exchanges and a simple description of what they do.

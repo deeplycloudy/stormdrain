@@ -1,5 +1,7 @@
 
+from __future__ import absolute_import
 import numpy as np
+from six.moves import zip
 
 def filled_plus(*args):
     """ Return a filled plus marker (suitable for use with scatter, for example)
@@ -48,7 +50,7 @@ def filled_plus(*args):
     b_bar = 0.5 - half_y
     plus_x = (0.0,   l_bar, l_bar, r_bar, r_bar, 1.0,   1.0,   r_bar, r_bar, l_bar, l_bar, 0.0)
     plus_y = (t_bar, t_bar, 1.0,   1.0,   t_bar, t_bar, b_bar, b_bar, 0.0,   0.0,   b_bar, b_bar)
-    plus_xy = zip(plus_x, plus_y)
+    plus_xy = list(zip(plus_x, plus_y))
     filled_plus_marker = (plus_xy, 0)
     return filled_plus_marker
     

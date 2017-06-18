@@ -1,9 +1,11 @@
+from __future__ import absolute_import
 import numpy as np
 
 from stormdrain.bounds import Bounds
 from stormdrain.pipeline import coroutine, Branchpoint, CachedTriggerableSegment
 from stormdrain.pubsub import get_exchange
 from stormdrain.support.matplotlib.animation import PipelineAnimation, FixedDurationAnimation
+from six.moves import zip
 
 class FigureUpdater(object):
     def __init__(self, figure):
@@ -175,7 +177,7 @@ class ScatterArtistOutlet(object):
             coords = self.coords
             # print "artist got coords ", coords
             x, y = a[coords[0]], a[coords[1]]
-            new_scatter_data = np.asarray(zip(x,y))
+            new_scatter_data = np.asarray(list(zip(x,y)))
             self.artist.set_offsets(new_scatter_data)
             
             if self.color_field is not None:
